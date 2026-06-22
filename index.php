@@ -40,6 +40,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 foreach ($ultimos_correos as $id_correo) {
                     $overview = imap_fetch_overview($inbox, $id_correo, 0);
                     $estructura = imap_fetchstructure($inbox, $id_correo);
+<?php
+// Desactivar temporalmente los avisos estrictos de IMAP para un manejo limpio de errores
+error_reporting(E_ALL & ~E_NOTICE);
+
+$resultado = "";
+$error = "";
+
+// Procesar el formulario cuando se hace la petición POST (al dar clic al botón)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Captura los datos usando el nombre correcto de la caja del formulario
+    $correo_receptor = $_POST['correo_receptor'] ?? '';
+    $password_app = $_POST['password_app'] ?? '';
+    $servidor_imap = $_POST['servidor_imap'] ?? 'imap.gmail.com';
+    
+    if (empty($correo_receptor) || empty($password_app)) {
+        $error = "Por favor, completa tu correo receptor y la contraseña de aplicación.";
+    } else {
+        // Estructura de la cadena de conexión IMAP segura (Puerto 993 SSL)
+        $mailbox = "{" . $servidor_imap . ":993/imap/ssl}INBOX";
+        
+        // Intentar conectar al servidor de correo de Google
+        $inbox = @imap_open($mailbox, $correo_receptor, $password_app);
+        
+        if (!$inbox) {
+            $error = "Fallo en la conexión: " . imap_last_error();
+        } else {
+            // Filtrar la búsqueda únicamente para correos provenientes de tu remitente de pruebas
+            $remitente_objetivo = "sayros364@gmail.com";
+            $emails = imap_search($inbox, 'FROM "' . $remitente_objetivo . '"');
+            
+            if ($emails) {
+                // Ordenar los correos para mostrar los más recientes primero
+                rsort($emails);
+                
+                $resultado .= "<h3 class='text-lg font-bold text-emerald-700 mb-4'>✅ Conexión exitosa. Correos de: {$remitente_objetivo}</h3>";
+                $resultado .= "<div class='space-y-4'>";
+                
+                // Analizar únicamente los últimos 3 mensajes para la prueba
+                $ultimos_correos = array_slice($emails, 0, 3);
+                
+                foreach ($ultimos_correos as $id_correo) {
+                    $overview = imap_fetch_overview($inbox, $id_correo, 0);
+                    $estructura = imap_fetchstructure($inbox, $id_correo);
                     
                     // Extraer el cuerpo del mensaje (Sección 1 suele ser texto plano)
                     $cuerpo = imap_fetchbody($inbox, $id_correo, 1);
@@ -49,8 +92,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $cuerpo = base64_decode($cuerpo);
                     }
                     
-                    // Expresión regular para buscar un patrón de código (Ej: un número, o letras con números)
-                    // Esta línea busca cualquier secuencia que contenga "REF-" seguido de números
+                    // Expresión regular para buscar cualquier secuencia que contenga "REF-" seguido de números
+                    preg_match('/REF-[0-9]+/i', $cuerpo, $coincidencias);
+                    $codigo_detectado = !empty($coincidencias) ? $coincidencias[0] : "No se encontró ningún patrón 'REF-XXXX'";
+                    
+<?php
+// Desactivar temporalmente los avisos estrictos de IMAP para un manejo limpio de errores
+error_reporting(E_ALL & ~E_NOTICE);
+
+$resultado = "";
+$error = "";
+
+// Procesar el formulario cuando se hace la petición POST (al dar clic al botón)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Captura los datos usando el nombre correcto de la caja del formulario
+    $correo_receptor = $_POST['correo_receptor'] ?? '';
+    $password_app = $_POST['password_app'] ?? '';
+    $servidor_imap = $_POST['servidor_imap'] ?? 'imap.gmail.com';
+    
+    if (empty($correo_receptor) || empty($password_app)) {
+        $error = "Por favor, completa tu correo receptor y la contraseña de aplicación.";
+    } else {
+        // Estructura de la cadena de conexión IMAP segura (Puerto 993 SSL)
+        $mailbox = "{" . $servidor_imap . ":993/imap/ssl}INBOX";
+        
+        // Intentar conectar al servidor de correo de Google
+        $inbox = @imap_open($mailbox, $correo_receptor, $password_app);
+        
+        if (!$inbox) {
+            $error = "Fallo en la conexión: " . imap_last_error();
+        } else {
+            // Filtrar la búsqueda únicamente para correos provenientes de tu remitente de pruebas
+            $remitente_objetivo = "sayros364@gmail.com";
+            $emails = imap_search($inbox, 'FROM "' . $remitente_objetivo . '"');
+            
+            if ($emails) {
+                // Ordenar los correos para mostrar los más recientes primero
+                rsort($emails);
+                
+                $resultado .= "<h3 class='text-lg font-bold text-emerald-700 mb-4'>✅ Conexión exitosa. Correos de: {$remitente_objetivo}</h3>";
+                $resultado .= "<div class='space-y-4'>";
+                
+                // Analizar únicamente los últimos 3 mensajes para la prueba
+                $ultimos_correos = array_slice($emails, 0, 3);
+                
+                foreach ($ultimos_correos as $id_correo) {
+                    $overview = imap_fetch_overview($inbox, $id_correo, 0);
+                    $estructura = imap_fetchstructure($inbox, $id_correo);
+                    
+                    // Extraer el cuerpo del mensaje (Sección 1 suele ser texto plano)
+                    $cuerpo = imap_fetchbody($inbox, $id_correo, 1);
+                    
+                    // Manejar la decodificación si el correo viene en Base64
+                    if ($estructura->parts[0]->encoding == 3 || $estructura->encoding == 3) {
+                        $cuerpo = base64_decode($cuerpo);
+                    }
+                    
+                    // Expresión regular para buscar cualquier secuencia que contenga "REF-" seguido de números
                     preg_match('/REF-[0-9]+/i', $cuerpo, $coincidencias);
                     $codigo_detectado = !empty($coincidencias) ? $coincidencias[0] : "No se encontró ningún patrón 'REF-XXXX'";
                     
@@ -73,14 +171,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PoC Lector IMAP - Render</title>
-    <!-- Tailwind CSS desde CDN para diseño rápido -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans flex items-center justify-center p-4">
@@ -95,18 +191,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
 
-        <!-- Formulario de Configuración -->
         <form action="" method="POST" class="space-y-4 mb-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Tu Correo Receptor (Donde recibes el mensaje)</label>
-                    <input type="email" name="correo_receptor" required placeholder="ejemplo@gmail.com" 
-                           value="<?php echo htmlspecialchars($_POST['correo_receptor'] ?? ''); ?>"
+                    <input type="email" name="correo_receptor" required 
+                           value="<?php echo htmlspecialchars($_POST['correo_receptor'] ?? 'correo.automatizado.yallegue@gmail.com'); ?>"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña de Aplicación de 16 dígitos</label>
-                    <input type="password" name="password_app" required placeholder="xxxx xxxx xxxx xxxx"
+                    <input type="password" name="password_app" required 
+                           value="<?php echo htmlspecialchars($_POST['password_app'] ?? 'omhn sbzo ycra nwry'); ?>"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                 </div>
             </div>
@@ -114,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Servidor IMAP del Proveedor</label>
                 <select name="servidor_imap" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
-                    <option value="imap.gmail.com" <?php echo ($_POST['servidor_imap'] === 'imap.gmail.com') ? 'selected' : ''; ?>>Gmail (imap.gmail.com)</option>
+                    <option value="imap.gmail.com" <?php echo (!isset($_POST['servidor_imap']) || $_POST['servidor_imap'] === 'imap.gmail.com') ? 'selected' : ''; ?>>Gmail (imap.gmail.com)</option>
                     <option value="outlook.office365.com" <?php echo ($_POST['servidor_imap'] === 'outlook.office365.com') ? 'selected' : ''; ?>>Outlook / Hotmail (outlook.office365.com)</option>
                 </select>
             </div>
@@ -124,7 +220,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
         </form>
 
-        <!-- Sección de Resultados -->
         <?php if (!empty($resultado)): ?>
             <div class="border-t border-gray-200 pt-6">
                 <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
